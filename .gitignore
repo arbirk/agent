@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local runtime directories & databases
+agent/
+.durable/
+*.sqlite
+*.sqlite-*
+
+# Logs & temp files
+*.log
+*.jsonl
+.DS_Store
+Thumbs.db
