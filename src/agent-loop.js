@@ -169,10 +169,29 @@ export class AgentLoop {
       try {
         assistantResponse = await this.llm.complete(messagesToSend);
       } catch (err) {
-        console.error(`❌ LLM Request Error: ${err.message}`);
+        console.error(`\n❌ [LLM Request Failed]`);
+        console.error(`   Endpoint: ${err.url || 'N/A'}`);
+        console.error(`   Message:  ${err.message}`);
+        if (err.category) {
+          console.error(`   Category: ${err.category}`);
+        }
+        if (err.troubleshootingHint) {
+          console.error(`\n💡 [Troubleshooting Hint]:\n   ${err.troubleshootingHint}`);
+        }
+        if (err.troubleshootingChecklist && err.troubleshootingChecklist.length > 0) {
+          console.error(`\n📋 [Recommended Actions]:`);
+          for (const item of err.troubleshootingChecklist) {
+            console.error(`   • ${item}`);
+          }
+        }
+        if (err.diagnosticCommands?.powershell) {
+          console.error(`\n🧪 [Test Command (PowerShell)]:\n   ${err.diagnosticCommands.powershell}`);
+        }
+        console.error(`\n📝 [Debug Log]: Full diagnostic trace saved to agent/llm-debug.jsonl\n`);
+
         return {
           success: false,
-          finalMessage: `LLM call failed: ${err.message}`,
+          finalMessage: `LLM call failed [${err.category || 'Error'}]: ${err.message}${err.troubleshootingHint ? ` (${err.troubleshootingHint})` : ''}`,
           turnCount: turn,
           history: taskHistory,
         };

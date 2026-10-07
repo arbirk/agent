@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { resolveLlmConfig } from './llm.js';
 import { AgentLoop } from './agent-loop.js';
 import { SessionStore } from './session-store.js';
@@ -31,9 +32,13 @@ export function loadConfig(workspaceDirOverride, debugOverride, debugLogPathOver
     workspaceDirOverride || process.env.AGENT_WORKSPACE_DIR || process.cwd()
   );
 
-  // Load .env from workspace, then fallback to current directory
+  // Load .env from workspace, then current directory, then agent repository root
   loadDotEnv(path.join(resolvedWorkspace, '.env'));
   loadDotEnv(path.resolve('.env'));
+  try {
+    const agentRootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    loadDotEnv(path.join(agentRootDir, '.env'));
+  } catch {}
 
   const isDebug = debugOverride ?? (process.env.DEBUG === '1' || process.env.DEBUG === 'true');
 
