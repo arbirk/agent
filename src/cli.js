@@ -1,89 +1,84 @@
-import * as readline from 'readline';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
-import { AgentConfig, ChatMessage } from './types.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { resolveLlmConfig } from './llm.js';
 import { AgentLoop } from './agent-loop.js';
 import { SessionStore } from './session-store.js';
 import { runInteractiveTui, renderTuiDashboard } from './tui.js';
 
-dotenv.config();
+function loadDotEnv(envPath) {
+  if (!fs.existsSync(envPath)) return;
+  try {
+    const content = fs.readFileSync(envPath, 'utf-8');
+    for (const line of content.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let val = trimmed.slice(eq + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (process.env[key] === undefined) {
+        process.env[key] = val;
+      }
+    }
+  } catch {}
+}
 
-function loadConfig(
-  workspaceDirOverride?: string,
-  debugOverride?: boolean,
-  debugLogPathOverride?: string
-): AgentConfig {
-  const apiKey =
-    process.env.LLM_API_KEY ||
-    process.env.GEMINI_API_KEY ||
-    process.env.OPENROUTER_API_KEY ||
-    process.env.OPENAI_API_KEY ||
-    '';
-
-  const defaultBaseUrl = process.env.GEMINI_API_KEY && !process.env.OPENROUTER_API_KEY
-    ? 'https://generativelanguage.googleapis.com/v1beta/openai/'
-    : 'https://openrouter.ai/api/v1';
-
-  const defaultModel = process.env.GEMINI_API_KEY && !process.env.OPENROUTER_API_KEY
-    ? 'gemini-flash-lite-latest'
-    : 'openai/gpt-4o';
-
+export function loadConfig(workspaceDirOverride, debugOverride, debugLogPathOverride) {
   const resolvedWorkspace = path.resolve(
-    workspaceDirOverride ||
-    process.env.AGENT_WORKSPACE_DIR ||
-    process.cwd()
+    workspaceDirOverride || process.env.AGENT_WORKSPACE_DIR || process.cwd()
   );
+
+  // Load .env from workspace, then fallback to current directory
+  loadDotEnv(path.join(resolvedWorkspace, '.env'));
+  loadDotEnv(path.resolve('.env'));
 
   const isDebug = debugOverride ?? (process.env.DEBUG === '1' || process.env.DEBUG === 'true');
 
-  return {
-    baseUrl: process.env.LLM_BASE_URL || defaultBaseUrl,
-    apiKey,
-    model: process.env.LLM_MODEL || defaultModel,
-    maxTurnTokens: parseInt(process.env.MAX_TURN_TOKENS || '4000', 10),
-    maxTotalTokens: parseInt(process.env.MAX_TOTAL_CONTEXT_TOKENS || '32000', 10),
+  return resolveLlmConfig({
     workspaceDir: resolvedWorkspace,
-    defaultShell: (process.env.PI_DEFAULT_SHELL as any) || 'powershell',
-    timeoutMs: parseInt(process.env.PI_TIMEOUT_MS || '60000', 10),
+    defaultShell: process.env.AGENT_DEFAULT_SHELL || 'powershell',
+    timeoutMs: parseInt(process.env.AGENT_TIMEOUT_MS || process.env.PI_TIMEOUT_MS || '60000', 10),
     debug: isDebug,
-    debugLogPath: debugLogPathOverride || path.join(resolvedWorkspace, 'agent', 'openrouter-debug.jsonl'),
-  };
+    debugLogPath: debugLogPathOverride || path.join(resolvedWorkspace, 'agent', 'llm-debug.jsonl'),
+  });
 }
 
-async function main() {
+export async function main() {
   const rawArgs = process.argv.slice(2);
-  let workspaceDir: string | undefined;
-  let debugMode: boolean | undefined;
-  let debugLogPath: string | undefined;
-  const taskWords: string[] = [];
+  let workspaceDir;
+  let debugMode;
+  let debugLogPath;
+  const taskWords = [];
 
   let showOverviewOnly = false;
   let showHistoryOnly = false;
 
   for (let i = 0; i < rawArgs.length; i++) {
-    if (rawArgs[i] === '--workspace' && i + 1 < rawArgs.length) {
-      workspaceDir = rawArgs[i + 1];
-      i++;
-    } else if (rawArgs[i] === '--debug' || rawArgs[i] === '-d') {
+    const arg = rawArgs[i];
+    if (arg === '--workspace' && i + 1 < rawArgs.length) {
+      workspaceDir = rawArgs[++i];
+    } else if (arg === '--debug' || arg === '-d') {
       debugMode = true;
-    } else if (rawArgs[i] === '--debug-file' && i + 1 < rawArgs.length) {
-      debugLogPath = rawArgs[i + 1];
+    } else if (arg === '--debug-file' && i + 1 < rawArgs.length) {
+      debugLogPath = rawArgs[++i];
       debugMode = true;
-      i++;
-    } else if (rawArgs[i] === '--overview' || rawArgs[i] === '-o' || rawArgs[i] === '-Overview') {
+    } else if (arg === '--overview' || arg === '-o' || arg === '-Overview') {
       showOverviewOnly = true;
-    } else if (rawArgs[i] === '--history' || rawArgs[i] === '-History') {
+    } else if (arg === '--history' || arg === '-History') {
       showHistoryOnly = true;
-    } else if (rawArgs[i] === '--help' || rawArgs[i] === '-h') {
+    } else if (arg === '--help' || arg === '-h') {
       console.log(`
-Pi Code Agent - Autonomous Markdown CLI Harness
+Code Agent - Autonomous CLI & Harness (CLM Safe)
 
 Usage:
-  .\\agent.ps1 "<task prompt>"      Execute 1-shot task
-  .\\agent.ps1                     Open interactive TUI dashboard
+  node src/cli.js "<task prompt>"      Execute 1-shot task
+  node src/cli.js                     Open interactive TUI dashboard
 
 Options:
-  -d, --debug            Stream raw OpenRouter message stream to disk in a JSONL file
+  -d, --debug            Log raw LLM request/response stream to disk in a JSONL file
   --debug-file <path>    Specify custom JSONL debug log file destination
   --workspace <path>     Workspace directory (defaults to current working directory)
   -o, --overview         Display the current session dashboard and exit
@@ -92,25 +87,19 @@ Options:
 `);
       process.exit(0);
     } else {
-      taskWords.push(rawArgs[i]);
+      taskWords.push(arg);
     }
   }
 
   const config = loadConfig(workspaceDir, debugMode, debugLogPath);
 
-  if (!config.apiKey) {
-    console.error('❌ Error: No API key provided.');
-    console.error('Please set LLM_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY in .env or environment.');
-    process.exit(1);
-  }
-
   if (config.debug) {
-    console.log(`🐛 [Debug Mode] Streaming raw OpenRouter messages to: ${config.debugLogPath}`);
+    console.log(`🐛 [Debug Mode] Logging LLM communications to: ${config.debugLogPath}`);
   }
 
   const loop = new AgentLoop(config);
-  const dbPath = path.join(config.workspaceDir, 'agent', 'session.sqlite');
-  const store = new SessionStore(dbPath);
+  const sessionPath = path.join(config.workspaceDir, 'agent', 'session.json');
+  const store = new SessionStore(sessionPath);
 
   if (showOverviewOnly) {
     const session = store.getOrCreateActiveSession(config.workspaceDir);
@@ -156,7 +145,7 @@ Options:
       });
       store.close();
       process.exit(result.success ? 0 : 1);
-    } catch (err: any) {
+    } catch (err) {
       const durationMs = Date.now() - startTime;
       store.recordTaskFinish(taskRecord.id, {
         success: false,
@@ -174,7 +163,10 @@ Options:
   await runInteractiveTui(loop, config, store);
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Only run automatically when executed directly from CLI
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))) {
+  main().catch((err) => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

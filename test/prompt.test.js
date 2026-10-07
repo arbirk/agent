@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { listWorkspaceEntries, getSystemPrompt } from '../src/prompt.js';
-import { PiHarness } from '../src/harness/pi-harness.js';
+import { PiHarness } from '../src/harness.js';
 
 const TEST_DIR = path.resolve(process.cwd(), 'temp_test_prompt');
 

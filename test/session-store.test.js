@@ -1,5 +1,5 @@
-import { test } from 'node:test';
-import * as assert from 'node:assert';
+import test from 'node:test';
+import assert from 'node:assert';
 import { SessionStore } from '../src/session-store.js';
 
 test('SessionStore creates active session, records task lifecycle, and tracks metrics', () => {
@@ -47,10 +47,10 @@ test('SessionStore handles todos and notes', () => {
   const toggled = store.toggleTodo(t1.id);
   assert.strictEqual(toggled?.done, true);
 
-  store.addNote(session.id, 'Architecture note: Use node:sqlite');
+  store.addNote(session.id, 'Architecture note: Zero dependencies');
   const notes = store.getNotes(session.id);
   assert.strictEqual(notes.length, 1);
-  assert.strictEqual(notes[0].content, 'Architecture note: Use node:sqlite');
+  assert.strictEqual(notes[0].content, 'Architecture note: Zero dependencies');
 
   const overview = store.getOverview(session.id);
   assert.ok(overview);

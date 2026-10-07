@@ -1,23 +1,12 @@
-import * as http from 'http';
-import { ChatMessage } from './types.js';
-
-export type MockGeneratorHandler = (messages: ChatMessage[], temperature?: number) => string | Promise<string>;
+import * as http from 'node:http';
 
 export class MockChatApiServer {
-  private server: http.Server;
-  private messages: ChatMessage[] = [];
-  private generatorHandler: MockGeneratorHandler;
-  private port: number;
-
-  constructor(
-    port: number = 8080,
-    customGenerator?: MockGeneratorHandler
-  ) {
+  constructor(port = 8080, customGenerator = null) {
     this.port = port;
+    this.messages = [];
     this.generatorHandler =
       customGenerator ||
       ((msgs) => {
-        // Default smart mock response: if initial user message, inspect workspace
         const lastMsg = msgs[msgs.length - 1];
         if (lastMsg?.role === 'user') {
           return 'I will inspect the workspace.\n```bash\nGet-ChildItem\n```';
@@ -29,15 +18,15 @@ export class MockChatApiServer {
       const url = req.url?.split('?')[0] || '';
       const method = (req.method || 'GET').toUpperCase();
 
-      const sendJson = (statusCode: number, data: any) => {
+      const sendJson = (statusCode, data) => {
         res.writeHead(statusCode, {
           'Content-Type': 'application/json',
-          'Connection': 'close',
+          Connection: 'close',
         });
         res.end(JSON.stringify(data));
       };
 
-      const readBody = async (): Promise<any> => {
+      const readBody = async () => {
         return new Promise((resolve, reject) => {
           let body = '';
           req.on('data', (chunk) => {
@@ -47,7 +36,7 @@ export class MockChatApiServer {
             if (!body) return resolve({});
             try {
               resolve(JSON.parse(body));
-            } catch (err) {
+            } catch {
               reject(new Error('Invalid JSON payload'));
             }
           });
@@ -56,10 +45,9 @@ export class MockChatApiServer {
       };
 
       try {
-        // 1. POST /chat/message <- post messages
         if (method === 'POST' && url === '/chat/message') {
           const body = await readBody();
-          const incoming: ChatMessage[] = Array.isArray(body)
+          const incoming = Array.isArray(body)
             ? body
             : Array.isArray(body.messages)
             ? body.messages
@@ -79,7 +67,6 @@ export class MockChatApiServer {
           });
         }
 
-        // 2. GET /chat/messages <- get the messages
         if (method === 'GET' && url === '/chat/messages') {
           return sendJson(200, {
             messages: [...this.messages],
@@ -87,19 +74,15 @@ export class MockChatApiServer {
           });
         }
 
-        // 3. POST /chat/generate <- trigger generation on the messages
         if (method === 'POST' && url === '/chat/generate') {
           const body = await readBody();
           const temperature = body.temperature ?? 0.2;
-
           const responseText = await this.generatorHandler(this.messages, temperature);
 
-          // Append generated assistant response to message history
-          const assistantMsg: ChatMessage = {
+          this.messages.push({
             role: 'assistant',
             content: responseText,
-          };
-          this.messages.push(assistantMsg);
+          });
 
           return sendJson(200, {
             content: responseText,
@@ -108,32 +91,31 @@ export class MockChatApiServer {
           });
         }
 
-        // 4. DELETE /chat/messages (Utility to clear messages during testing)
         if (method === 'DELETE' && url === '/chat/messages') {
           this.clearMessages();
           return sendJson(200, { success: true, message: 'Messages cleared' });
         }
 
         return sendJson(404, { error: `Not found: ${method} ${url}` });
-      } catch (err: any) {
+      } catch (err) {
         return sendJson(500, { error: err.message });
       }
     });
   }
 
-  public setGenerator(handler: MockGeneratorHandler): void {
+  setGenerator(handler) {
     this.generatorHandler = handler;
   }
 
-  public getMessages(): ChatMessage[] {
+  getMessages() {
     return [...this.messages];
   }
 
-  public clearMessages(): void {
+  clearMessages() {
     this.messages = [];
   }
 
-  public start(): Promise<number> {
+  start() {
     return new Promise((resolve, reject) => {
       this.server.listen(this.port, () => {
         const addr = this.server.address();
@@ -145,11 +127,11 @@ export class MockChatApiServer {
     });
   }
 
-  public stop(): Promise<void> {
+  stop() {
     return new Promise((resolve, reject) => {
       try {
-        if (typeof (this.server as any).closeAllConnections === 'function') {
-          (this.server as any).closeAllConnections();
+        if (typeof this.server.closeAllConnections === 'function') {
+          this.server.closeAllConnections();
         }
       } catch {}
       this.server.close((err) => {
@@ -159,9 +141,7 @@ export class MockChatApiServer {
     });
   }
 
-  public getPort(): number {
+  getPort() {
     return this.port;
   }
 }
-
-

@@ -1,8 +1,5 @@
-import * as readline from 'readline';
-import * as path from 'path';
-import { AgentConfig } from './types.js';
-import { AgentLoop } from './agent-loop.js';
-import { SessionStore, TuiOverview } from './session-store.js';
+import readline from 'node:readline';
+import path from 'node:path';
 
 // ANSI formatting helpers
 const c = {
@@ -19,7 +16,7 @@ const c = {
   gray: '\x1b[90m',
 };
 
-export function renderTuiDashboard(overview: TuiOverview, config: AgentConfig): void {
+export function renderTuiDashboard(overview, config) {
   const { session, tasks, todos, notes, stats } = overview;
   const divider = '─'.repeat(72);
 
@@ -32,7 +29,7 @@ export function renderTuiDashboard(overview: TuiOverview, config: AgentConfig): 
 
   // Workspace & Config
   console.log(`${c.cyan}${c.bold}│${c.reset}  📂 Workspace : ${c.yellow}${session.workspace}${c.reset}`);
-  console.log(`${c.cyan}${c.bold}│${c.reset}  🧠 Model     : ${c.white}${config.model}${c.reset} ${c.gray}(Turn limit: ${config.maxTurnTokens}t | Total: ${config.maxTotalTokens}t)${c.reset}`);
+  console.log(`${c.cyan}${c.bold}│${c.reset}  🧠 Model     : ${c.white}${config.model || 'chat'}${c.reset} ${c.gray}(Turn limit: ${config.maxTurnTokens || 4000}t | Total: ${config.maxTotalTokens || 32000}t)${c.reset}`);
   console.log(
     `${c.cyan}${c.bold}│${c.reset}  📊 Tasks     : ${c.green}${stats.successTasks} Succeeded${c.reset} | ${c.red}${stats.failedTasks} Failed${c.reset} | ${stats.totalTasks} Total`
   );
@@ -87,7 +84,7 @@ export function renderTuiDashboard(overview: TuiOverview, config: AgentConfig): 
   console.log(`${c.cyan}${c.bold}└${divider}┘${c.reset}\n`);
 }
 
-export function printTuiHelp(): void {
+export function printTuiHelp() {
   console.log(`
 ${c.bold}Code Agent TUI Commands:${c.reset}
   ${c.cyan}<any prompt>${c.reset}        Execute an autonomous task and record results to session history
@@ -105,11 +102,7 @@ ${c.bold}Code Agent TUI Commands:${c.reset}
 `);
 }
 
-export async function runInteractiveTui(
-  loop: AgentLoop,
-  config: AgentConfig,
-  store: SessionStore
-): Promise<void> {
+export async function runInteractiveTui(loop, config, store) {
   const session = store.getOrCreateActiveSession(config.workspaceDir);
   let overview = store.getOverview(session.id);
   if (overview) renderTuiDashboard(overview, config);
@@ -275,7 +268,7 @@ export async function runInteractiveTui(
 
         const statusLabel = result.success ? `${c.green}✔ Task Succeeded${c.reset}` : `${c.red}❌ Task Failed${c.reset}`;
         console.log(`\n${statusLabel} in ${(durationMs / 1000).toFixed(1)}s.`);
-      } catch (err: any) {
+      } catch (err) {
         const durationMs = Date.now() - startTime;
         store.recordTaskFinish(taskRecord.id, {
           success: false,

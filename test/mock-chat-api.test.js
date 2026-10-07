@@ -1,16 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { MockChatApiServer } from '../src/mock-chat-api.js';
-import { RestChatApiAdapter, enforceSeparate4kMessages } from '../src/llm-adapter.js';
-import { LlmClient } from '../src/llm-client.js';
-import { ChatMessage, AgentConfig } from '../src/types.js';
+import { RestChatApiAdapter, enforceSeparate4kMessages, LlmClient } from '../src/llm.js';
 
 test('enforceSeparate4kMessages keeps harness, AGENTS.md, and loop messages separate and capped at 4000 tokens', () => {
   const giantHarness = 'Harness instructions '.repeat(2000); // ~11,000 tokens
   const giantAgentsMd = 'AGENTS memory '.repeat(2000); // ~7,700 tokens
   const giantUserTurn = 'User turn '.repeat(2000); // ~5,500 tokens
 
-  const inputMessages: ChatMessage[] = [
+  const inputMessages = [
     { role: 'system', content: giantHarness },
     { role: 'system', content: giantAgentsMd },
     { role: 'user', content: giantUserTurn },
@@ -41,7 +39,7 @@ test('MockChatApiServer handles /chat/message, /chat/messages, and /chat/generat
 
   try {
     // 1. Post initial messages (Harness, AGENTS.md, Loop message)
-    const messages: ChatMessage[] = [
+    const messages = [
       { role: 'system', content: 'Base harness instructions' },
       { role: 'system', content: 'Project memory from AGENTS.md' },
       { role: 'user', content: 'Task: build index.html' },
@@ -79,7 +77,7 @@ test('LlmClient works seamlessly with RestChatApiAdapter', async () => {
   const baseUrl = `http://localhost:${port}`;
   const adapter = new RestChatApiAdapter(baseUrl);
 
-  const dummyConfig: AgentConfig = {
+  const dummyConfig = {
     baseUrl,
     apiKey: 'none',
     model: 'mock-model',
@@ -93,7 +91,7 @@ test('LlmClient works seamlessly with RestChatApiAdapter', async () => {
   const client = new LlmClient(dummyConfig, adapter);
 
   try {
-    const messages: ChatMessage[] = [
+    const messages = [
       { role: 'system', content: 'Harness prompt' },
       { role: 'system', content: 'AGENTS.md notes' },
       { role: 'user', content: 'Execute task' },
@@ -112,3 +110,18 @@ test('LlmClient works seamlessly with RestChatApiAdapter', async () => {
     await server.stop();
   }
 });
+
+test('authHeaders leaves out Authorization header when bearer token is empty or omitted', async () => {
+  const { authHeaders } = await import('../src/llm.js');
+  assert.deepStrictEqual(authHeaders({ apiKey: '' }), {});
+  assert.deepStrictEqual(authHeaders({ apiKey: '   ' }), {});
+  assert.deepStrictEqual(authHeaders({ apiKey: null }), {});
+  assert.deepStrictEqual(authHeaders({ apiKey: undefined }), {});
+  assert.deepStrictEqual(authHeaders({ apiKey: 'none' }), {});
+
+  // When token is provided, formats as expected
+  assert.deepStrictEqual(authHeaders({ apiKey: 'my-token' }), { Authorization: 'Bearer my-token' });
+  assert.deepStrictEqual(authHeaders({ apiKey: 'Bearer existing' }), { Authorization: 'Bearer existing' });
+  assert.deepStrictEqual(authHeaders({ apiKey: 'azure-key', authHeader: 'api-key' }), { 'api-key': 'azure-key' });
+});
+

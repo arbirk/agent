@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import * as fs from 'fs';
-import * as path from 'path';
-import { PiHarness } from '../src/harness/pi-harness.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { Harness, PiHarness } from '../src/harness.js';
 import { extractAndSaveTemplate } from '../src/agent-loop.js';
 
 const TEST_DIR = path.resolve(process.cwd(), 'temp_test_harness');
@@ -279,7 +279,3 @@ test('PiHarness safely rejects empty paths and directory targets without unhandl
   assert.strictEqual(dirEdit.success, false);
   assert.ok(dirEdit.output.includes('directory, not a file'));
 });
-
-
-
-

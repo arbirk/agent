@@ -1,24 +1,15 @@
 {
   "name": "code-agent",
   "version": "0.1.0",
-  "description": "Custom Markdown-based AI coding agent with pi.dev harness and PowerShell CLI",
+  "description": "Zero-dependency autonomous coding agent with markdown harness and PowerShell CLM support",
   "license": "MIT",
   "type": "module",
-  "main": "dist/cli.js",
+  "main": "src/cli.js",
+  "bin": {
+    "code-agent": "./src/cli.js"
+  },
   "scripts": {
-    "start": "tsx src/cli.ts",
-    "test": "tsx --test test/**/*.test.ts",
-    "build": "tsc"
-  },
-  "dependencies": {
-    "@earendil-works/pi-agent-core": "^0.99.2",
-    "@earendil-works/pi-coding-agent": "^0.99.2",
-    "dotenv": "^16.4.7",
-    "openai": "^4.86.1"
-  },
-  "devDependencies": {
-    "@types/node": "^22.13.9",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
+    "start": "node src/cli.js",
+    "test": "node --test test/**/*.test.js"
   }
 }

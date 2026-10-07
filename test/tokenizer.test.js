@@ -8,7 +8,6 @@ import {
   truncateToTokens,
   exceedsTotalBudget,
 } from '../src/tokenizer.js';
-import { ChatMessage } from '../src/types.js';
 
 test('estimateTokens calculates reasonable token approximations', () => {
   const shortText = 'Hello world, this is a test.';
@@ -20,14 +19,14 @@ test('estimateTokens calculates reasonable token approximations', () => {
 });
 
 test('exceedsTurnBudget detects 4000 token limit', () => {
-  const smallMessages: ChatMessage[] = [
+  const smallMessages = [
     { role: 'user', content: 'Do something' },
     { role: 'assistant', content: 'Sure, here is the answer' },
   ];
   assert.strictEqual(exceedsTurnBudget(smallMessages, 4000), false);
 
   // Large message > 4000 tokens (e.g. 15,000 characters)
-  const hugeMessages: ChatMessage[] = [
+  const hugeMessages = [
     { role: 'user', content: 'x'.repeat(16000) },
   ];
   assert.strictEqual(exceedsTurnBudget(hugeMessages, 4000), true);
@@ -35,19 +34,19 @@ test('exceedsTurnBudget detects 4000 token limit', () => {
 
 test('exceedsTotalBudget detects 32000 total context limit', () => {
   const systemPrompt = 'System prompt';
-  const mediumMessages: ChatMessage[] = [
+  const mediumMessages = [
     { role: 'user', content: 'x'.repeat(20000) },
   ];
   assert.strictEqual(exceedsTotalBudget(systemPrompt, mediumMessages, 32000), false);
 
-  const hugeContext: ChatMessage[] = [
+  const hugeContext = [
     { role: 'user', content: 'x'.repeat(120000) },
   ];
   assert.strictEqual(exceedsTotalBudget(systemPrompt, hugeContext, 32000), true);
 });
 
 test('shouldCompressAggressively triggers on high token density or long loop turns', () => {
-  const smallMessages: ChatMessage[] = [
+  const smallMessages = [
     { role: 'user', content: 'hello' },
   ];
 
@@ -61,13 +60,13 @@ test('shouldCompressAggressively triggers on high token density or long loop tur
   assert.strictEqual(shouldCompressAggressively(smallMessages, 4000, 8, 16), false);
 
   // Long history AND heavy tokens (>= 2000 tokens) -> true
-  const mediumMessages: ChatMessage[] = [
+  const mediumMessages = [
     { role: 'user', content: 'x'.repeat(8000) },
   ];
   assert.strictEqual(shouldCompressAggressively(mediumMessages, 4000, 8, 16), true);
 
   // Heavy tokens (>= 3400 tokens = ~12500+ chars) -> true regardless of message count
-  const heavyMessages: ChatMessage[] = [
+  const heavyMessages = [
     { role: 'user', content: 'x'.repeat(13000) },
   ];
   assert.strictEqual(shouldCompressAggressively(heavyMessages, 4000, 2, 2), true);
@@ -79,4 +78,3 @@ test('truncateToTokens cleanly cuts off text within budget', () => {
   assert.ok(truncated.length <= 25);
   assert.ok(truncated.includes('Line 1'));
 });
-

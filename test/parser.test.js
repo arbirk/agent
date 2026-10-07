@@ -13,7 +13,7 @@ Let me know if you need more.
   const calls = parseToolCalls(markdown);
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(calls[0].type, 'powershell');
-  assert.strictEqual((calls[0] as any).command, 'Get-ChildItem -Name');
+  assert.strictEqual(calls[0].command, 'Get-ChildItem -Name');
 });
 
 test('parseToolCalls parses write and read blocks', () => {
@@ -30,13 +30,13 @@ Now reading the file:
   assert.strictEqual(calls.length, 2);
 
   assert.strictEqual(calls[0].type, 'write');
-  assert.strictEqual((calls[0] as any).path, 'src/hello.ts');
-  assert.strictEqual((calls[0] as any).content.trim(), 'export const greeting = "Hello World";');
+  assert.strictEqual(calls[0].path, 'src/hello.ts');
+  assert.strictEqual(calls[0].content.trim(), 'export const greeting = "Hello World";');
 
   assert.strictEqual(calls[1].type, 'read');
-  assert.strictEqual((calls[1] as any).path, 'src/hello.ts');
-  assert.strictEqual((calls[1] as any).startLine, 1);
-  assert.strictEqual((calls[1] as any).endLine, 5);
+  assert.strictEqual(calls[1].path, 'src/hello.ts');
+  assert.strictEqual(calls[1].startLine, 1);
+  assert.strictEqual(calls[1].endLine, 5);
 });
 
 test('parseToolCalls parses edit blocks with attributes and diff markers', () => {
@@ -47,9 +47,9 @@ test('parseToolCalls parses edit blocks with attributes and diff markers', () =>
   const callsAttr = parseToolCalls(markdownAttr);
   assert.strictEqual(callsAttr.length, 1);
   assert.strictEqual(callsAttr[0].type, 'edit');
-  assert.strictEqual((callsAttr[0] as any).path, 'config.json');
-  assert.strictEqual((callsAttr[0] as any).find, '"port": 3000');
-  assert.strictEqual((callsAttr[0] as any).replace, '"port": 8080');
+  assert.strictEqual(callsAttr[0].path, 'config.json');
+  assert.strictEqual(callsAttr[0].find, '"port": 3000');
+  assert.strictEqual(callsAttr[0].replace, '"port": 8080');
 
   const markdownDiff = `
 \`\`\`edit path="src/main.ts"
@@ -63,9 +63,9 @@ const a = 42;
   const callsDiff = parseToolCalls(markdownDiff);
   assert.strictEqual(callsDiff.length, 1);
   assert.strictEqual(callsDiff[0].type, 'edit');
-  assert.strictEqual((callsDiff[0] as any).path, 'src/main.ts');
-  assert.strictEqual((callsDiff[0] as any).find.trim(), 'const a = 1;');
-  assert.strictEqual((callsDiff[0] as any).replace.trim(), 'const a = 42;');
+  assert.strictEqual(callsDiff[0].path, 'src/main.ts');
+  assert.strictEqual(callsDiff[0].find.trim(), 'const a = 1;');
+  assert.strictEqual(callsDiff[0].replace.trim(), 'const a = 42;');
 });
 
 test('parseToolCalls parses multiline find and replace attributes', () => {
@@ -81,13 +81,13 @@ test('parseToolCalls parses multiline find and replace attributes', () => {
   const calls = parseToolCalls(markdown);
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(calls[0].type, 'edit');
-  assert.strictEqual((calls[0] as any).path, 'src/example.py');
+  assert.strictEqual(calls[0].path, 'src/example.py');
   assert.strictEqual(
-    (calls[0] as any).find,
+    calls[0].find,
     "for line in lines:\n    if line.startswith('#'):\n        parts = line.split(' ')"
   );
   assert.strictEqual(
-    (calls[0] as any).replace,
+    calls[0].replace,
     "for line in lines:\n    if not line.startswith('#'):\n        continue\n    parts = line.split('\\t')"
   );
 });
@@ -102,7 +102,7 @@ Created the repository, configured the build, and all tests pass.
   const calls = parseToolCalls(markdown);
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(calls[0].type, 'finish');
-  assert.strictEqual((calls[0] as any).summary, 'Created the repository, configured the build, and all tests pass.');
+  assert.strictEqual(calls[0].summary, 'Created the repository, configured the build, and all tests pass.');
 });
 
 test('parseToolCalls parses YAML style write blocks with path: and content: |', () => {
@@ -117,9 +117,8 @@ content: |
   const calls = parseToolCalls(markdown);
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(calls[0].type, 'write');
-  assert.strictEqual((calls[0] as any).path, 'C:\\test\\rose.html');
-  assert.ok((calls[0] as any).content.includes('<!DOCTYPE html>'));
-  assert.ok(!(calls[0] as any).content.includes('path:'));
-  assert.ok(!(calls[0] as any).content.includes('content: |'));
+  assert.strictEqual(calls[0].path, 'C:\\test\\rose.html');
+  assert.ok(calls[0].content.includes('<!DOCTYPE html>'));
+  assert.ok(!calls[0].content.includes('path:'));
+  assert.ok(!calls[0].content.includes('content: |'));
 });
-

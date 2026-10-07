@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import * as fs from 'fs';
-import * as path from 'path';
-import { LlmClient } from '../src/llm-client.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { LlmClient } from '../src/llm.js';
 
 const TEST_DIR = path.resolve(process.cwd(), 'temp_test_debug');
 
@@ -19,11 +19,11 @@ test.after(() => {
 });
 
 test('LlmClient logs debug events to JSONL file when debug is enabled', () => {
-  const debugFile = path.join(TEST_DIR, 'openrouter-debug.jsonl');
+  const debugFile = path.join(TEST_DIR, 'llm-debug.jsonl');
   const client = new LlmClient({
-    baseUrl: 'https://openrouter.ai/api/v1',
+    baseUrl: 'http://localhost:8000/v1',
     apiKey: 'test-key',
-    model: 'openai/gpt-4o',
+    model: 'mock-model',
     maxTurnTokens: 4000,
     maxTotalTokens: 32000,
     workspaceDir: TEST_DIR,
@@ -34,7 +34,7 @@ test('LlmClient logs debug events to JSONL file when debug is enabled', () => {
   });
 
   // Log sample debug events
-  client.logDebug({ event: 'request', model: 'openai/gpt-4o', test: true });
+  client.logDebug({ event: 'request', model: 'mock-model', test: true });
   client.logDebug({ event: 'stream_chunk', chunk: { id: 'chunk-1', delta: 'hello' } });
   client.logDebug({ event: 'response_complete', content: 'hello' });
 
@@ -46,7 +46,7 @@ test('LlmClient logs debug events to JSONL file when debug is enabled', () => {
 
   const parsed1 = JSON.parse(lines[0]);
   assert.strictEqual(parsed1.event, 'request');
-  assert.strictEqual(parsed1.model, 'openai/gpt-4o');
+  assert.strictEqual(parsed1.model, 'mock-model');
   assert.ok(parsed1.timestamp);
 
   const parsed2 = JSON.parse(lines[1]);
@@ -58,11 +58,11 @@ test('LlmClient logs debug events to JSONL file when debug is enabled', () => {
   assert.strictEqual(parsed3.content, 'hello');
 });
 
-test('LlmClient defaults debugLogPath to agent/openrouter-debug.jsonl when not specified', () => {
+test('LlmClient defaults debugLogPath to agent/llm-debug.jsonl when not specified', () => {
   const client = new LlmClient({
-    baseUrl: 'https://openrouter.ai/api/v1',
+    baseUrl: 'http://localhost:8000/v1',
     apiKey: 'test-key',
-    model: 'openai/gpt-4o',
+    model: 'mock-model',
     maxTurnTokens: 4000,
     maxTotalTokens: 32000,
     workspaceDir: TEST_DIR,
@@ -72,10 +72,9 @@ test('LlmClient defaults debugLogPath to agent/openrouter-debug.jsonl when not s
   });
 
   client.logDebug({ event: 'default_path_test', status: 'ok' });
-  const defaultFile = path.join(TEST_DIR, 'agent', 'openrouter-debug.jsonl');
+  const defaultFile = path.join(TEST_DIR, 'agent', 'llm-debug.jsonl');
   assert.strictEqual(fs.existsSync(defaultFile), true);
   const content = fs.readFileSync(defaultFile, 'utf-8').trim();
   const parsed = JSON.parse(content);
   assert.strictEqual(parsed.event, 'default_path_test');
 });
-

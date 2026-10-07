@@ -1,8 +1,7 @@
-import { test } from 'node:test';
-import * as assert from 'node:assert';
+import test from 'node:test';
+import assert from 'node:assert';
 import { SessionStore } from '../src/session-store.js';
 import { renderTuiDashboard, printTuiHelp } from '../src/tui.js';
-import { AgentConfig } from '../src/types.js';
 
 test('renderTuiDashboard renders cleanly with session stats, checklist, and task history', () => {
   const store = new SessionStore(':memory:');
@@ -25,10 +24,10 @@ test('renderTuiDashboard renders cleanly with session stats, checklist, and task
   const overview = store.getOverview(session.id);
   assert.ok(overview);
 
-  const dummyConfig: AgentConfig = {
-    baseUrl: 'https://openrouter.ai/api/v1',
+  const dummyConfig = {
+    baseUrl: 'http://localhost:8000/v1',
     apiKey: 'test-key',
-    model: 'openai/gpt-4o',
+    model: 'mock-model',
     maxTurnTokens: 4000,
     maxTotalTokens: 32000,
     workspaceDir: '/workspace/app',

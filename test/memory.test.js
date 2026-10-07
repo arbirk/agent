@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { ProjectMemory, pruneMemoryLog } from '../src/memory.js';
 import { estimateTokens } from '../src/tokenizer.js';
 
