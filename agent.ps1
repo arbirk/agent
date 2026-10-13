@@ -17,7 +17,7 @@ $isHelp = $Help -or ($Task -contains "-h") -or ($Task -contains "--help") -or ($
 
 # Prompt for Bearer token unless token was provided via flag/pipeline or help flag is present
 if (-not $isHelp) {
-    if ($PSBoundParameters.ContainsKey('Token')) {
+    if ($PSBoundParameters.Keys -contains 'Token') {
         $env:LLM_API_KEY = if ($Token) { $Token.Trim() } else { "" }
     } else {
         $enteredToken = Read-Host "Bearer token (press Enter to leave empty)"
@@ -32,7 +32,11 @@ if (-not $isHelp) {
 $callerDir = (Get-Location).Path
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) {
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    if ($MyInvocation.MyCommand -and $MyInvocation.MyCommand.Path) {
+        $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    } else {
+        $scriptDir = $callerDir
+    }
 }
 
 $cliPath = Join-Path $scriptDir "src\cli.js"
